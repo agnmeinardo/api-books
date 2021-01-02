@@ -32,6 +32,6 @@ conexion.connect((error) => {
 // Permito el uso de async-await en la conexión para que no se quede trabaja la aplicación esperando la respuesta. Con async-await se hace asíncronamente la respuesta (sigo ejecutando lo demás de la aplicación).
 const qy = util.promisify(conexion.query).bind(conexion);
 
-
+// Comentario
 
 app.listen(port, () => { console.log("Servidor en escucha en el puerto " + port)});
