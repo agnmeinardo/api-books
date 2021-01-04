@@ -56,6 +56,30 @@ app.get('/categoria', async (req, res) => {
 
 });
 
+app.get('/categoria/:id', async (req, res) => {
+
+    try{
+
+        console.log(req.params.id);
+        const query = "SELECT * FROM categoria WHERE id_categoria = ?";
+
+        const respuesta = await qy(query,[req.params.id]);
+        console.log(respuesta);
+
+        if(respuesta.length == 0) {
+            throw new Error('Categoria no encontrada');
+        }
+
+        res.status(200).send({"id": respuesta[0].id_categoria, "nombre": respuesta[0].nombre});
+
+    }
+    catch(e){
+        console.log(e.message);
+        res.status(413).send({"message": e.message});
+    }
+
+});
+
 app.post('/categoria', async (req, res) => {
 
     try{
@@ -88,7 +112,41 @@ app.post('/categoria', async (req, res) => {
 
 });
 
-// Hasta acá anda bien
+app.delete('/categoria/:id', async (req,res) => {
+
+    try{
+
+        const id = req.params.id;
+        let query = "SELECT * FROM categoria WHERE id_categoria = ?";
+        let respuesta = await qy(query,[id]);
+
+        console.log(respuesta);
+
+        if(respuesta.length == 0){
+            throw new Error('No existe la categoria indicada');
+        }
+
+        query = "SELECT COUNT(*) AS cantidad FROM libro WHERE id_categoria = ?";
+        respuesta = await qy(query,[id]);
+        const cantidad = respuesta[0].cantidad;
+        
+        if(cantidad > 0){
+            throw new Error('Categoria con libros asociados; no se puede eliminar');
+        }
+
+        query = "DELETE FROM categoria WHERE id_categoria = ?";
+        respuesta = await qy(query,[id]);
+        res.status(200).send({"message": "Se borró correctamente"});
+
+
+    }
+    catch(e){
+        console.log(e.message);
+        res.status(413).send({"message": e.message});
+    }
+
+
+});
 
 
 
