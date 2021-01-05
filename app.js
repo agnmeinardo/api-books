@@ -105,7 +105,7 @@ app.get('/categoria/:id', async (req, res) => {
     }
     catch(e){
         console.log(e.message);
-        res.status(413).send({"message": e.message});
+        res.status(413).send({"mensaje": e.message});
     }
 
 });
@@ -137,7 +137,7 @@ app.post('/categoria', async (req, res) => {
     }
     catch(e){
         console.log(e.message);
-        res.status(413).send({ "message": e.message});
+        res.status(413).send({ "mensaje": e.message});
     }
 
 });
@@ -166,13 +166,13 @@ app.delete('/categoria/:id', async (req,res) => {
 
         query = "DELETE FROM categoria WHERE id_categoria = ?";
         respuesta = await qy(query,[id]);
-        res.status(200).send({"message": "Se borró correctamente"});
+        res.status(200).send({"mensaje": "Se borró correctamente"});
 
 
     }
     catch(e){
         console.log(e.message);
-        res.status(413).send({"message": e.message});
+        res.status(413).send({"mensaje": e.message});
     }
 
 
@@ -217,7 +217,7 @@ app.get('/persona/:id', async (req, res) => {
     }
     catch(e){
         console.log(e.message);
-        res.status(413).send({"message": e.message});
+        res.status(413).send({"mensaje": e.message});
     }
 
 });
@@ -259,11 +259,171 @@ app.post('/persona', async (req, res) => {
     }
     catch(e){
         console.log(e.message);
-        res.status(413).send({ "message": e.message});
+        res.status(413).send({ "mensaje": e.message});
     }
 
 });
 
+app.put('/persona/:id', async (req,res) => {
+
+    try{
+        const id = req.params.id;
+        const nombreNuevo = req.body.nombre.toUpperCase();
+        const apellidoNuevo = req.body.apellido.toUpperCase();
+        const mail = req.body.mail; // El "no se puede modificar" puede ir en la vista y así no se hacen modificaciones desde el server.
+        const aliasNuevo = req.body.alias;
+
+        let query = "SELECT COUNT(*) AS cantidad FROM persona WHERE id_persona = ?";
+        let respuesta = await qy(query, [id]);
+        const cantidad = respuesta[0].cantidad;
+
+        if(cantidad == 0){
+            throw new Error("No se encuentra esa persona");
+        }
+
+        query = "UPDATE persona SET nombre = ? , apellido = ? , alias = ? WHERE id_persona = ?";
+        respuesta = await qy(query, [nombreNuevo,apellidoNuevo,aliasNuevo,id]);
+
+
+        res.status(200).send({"id": id, "nombre": nombreNuevo, "apellido": apellidoNuevo, "alias": aliasNuevo});
+
+    }
+    catch(e){
+        console.log(e.message);
+        res.status(413).send({ "mensaje": e.message});
+    }
+
+});
+
+
+app.delete('/persona/:id', async (req,res) => {
+
+    try{
+
+        const id = req.params.id;
+
+        let query = "SELECT * FROM persona WHERE id_persona = ?";
+        let respuesta = await qy(query,[id]);
+
+        if(respuesta.length == 0){
+            throw new Error("No existe esa persona");
+        }
+
+        query = "SELECT COUNT(*) AS cantidad FROM libro WHERE id_persona = ?";
+        respuesta = await qy(query,[id]);
+        const cantidad = respuesta[0].cantidad;
+
+        if(cantidad > 0){
+            throw new Error("Esa persona tiene libros asociados; no se puede eliminar");
+        }
+
+        res.status(200).send({"mensaje": "Se borró correctamente"});
+
+    }
+    catch(e){
+        log.console(e.message);
+        res.status(413).send({"mensaje": e.message});
+    }
+
+});
+
+
+/** 
+ *  Libro
+ */
+
+app.get('/libro', async (req, res) => {
+
+    try{
+
+        const query = "SELECT * FROM libro";
+        const respuesta = await qy(query);
+
+        res.status(200).send(respuesta);
+
+    }
+    catch(e){
+        console.log(e.message);
+        res.status(413).send({"mensaje": e.message});
+    }
+
+});
+
+app.get('/libro/:id', async (req, res) => {
+
+    try{
+
+        const query = "SELECT * FROM libro WHERE id_libro = ?";
+
+        const respuesta = await qy(query,[req.params.id]);
+
+        if(respuesta.length == 0) {
+            throw new Error('Libro no encontrado');
+        }
+
+        res.status(200).send({"id": respuesta[0].id_libro, "nombre": respuesta[0].nombre, "descripcion": respuesta[0].descripcion, "categoria_id": respuesta[0].categoria_id , "persona_id": respuesta[0].persona_id});
+
+    }
+    catch(e){
+        console.log(e.message);
+        res.status(413).send({"mensaje": e.message});
+    }
+
+});
+
+app.post('/libro', async (req, res) => {
+
+    try{
+
+        const nombre = req.body.nombre.toUpperCase(); // Se settea el nombre en upperCase para evitar errores de literalidad.
+        const descripcion = req.body.descripcion;
+        const id_categoria = req.body.id_categoria;
+        let id_persona = req.body.id_persona;
+        let query, respuesta;
+
+        // Realizo validaciones
+        if(!nombre || !id_categoria){
+            throw new Error('Nombre y categoria son datos obligatorios');
+        }
+
+        if(!id_persona){
+            id_persona = null;
+        } else {
+
+            query = "SELECT * FROM persona WHERE id_persona = ? ";
+            respuesta = await qy(query,[id_persona]);
+    
+            if(respuesta.length == 0){
+                throw new Error('No existe la persona indicada');
+            }
+        }
+
+        query = "SELECT * FROM categoria WHERE id_categoria = ? ";
+        respuesta = await qy(query,[id_categoria]);
+
+        if(respuesta.length == 0){
+            throw new Error('No existe la categoria indicada');
+        }
+
+        query = "SELECT * FROM libro WHERE nombre = ?";
+        respuesta = await qy(query,[nombre]);
+
+        if(respuesta.length > 0){
+            throw new Error('Ese libro ya existe');
+        }
+
+        query = "INSERT INTO libro (nombre,descripcion,id_categoria,id_persona) VALUE (?,?,?,?)";
+        respuesta = await qy(query,[nombre, descripcion, id_categoria, id_persona]);
+
+        res.status(200).send({"id": respuesta.insertId, "nombre": nombre, "descripcion": descripcion, "id_categoria": id_categoria, "id_persona": id_persona});
+
+    }
+    catch(e){
+        console.log(e.message);
+        res.status(413).send({ "mensaje": e.message});
+    }
+
+});
 
 
 
