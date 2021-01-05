@@ -283,8 +283,6 @@ app.put('/persona/:id', async (req,res) => {
 
         query = "UPDATE persona SET nombre = ? , apellido = ? , alias = ? WHERE id_persona = ?";
         respuesta = await qy(query, [nombreNuevo,apellidoNuevo,aliasNuevo,id]);
-
-
         res.status(200).send({"id": id, "nombre": nombreNuevo, "apellido": apellidoNuevo, "alias": aliasNuevo});
 
     }
@@ -317,11 +315,13 @@ app.delete('/persona/:id', async (req,res) => {
             throw new Error("Esa persona tiene libros asociados; no se puede eliminar");
         }
 
+        query = "DELETE FROM persona WHERE id_persona = ?";
+        respuesta = await qy(query,[id]);
         res.status(200).send({"mensaje": "Se borró correctamente"});
 
     }
     catch(e){
-        log.console(e.message);
+        console.log(e.message);
         res.status(413).send({"mensaje": e.message});
     }
 
@@ -361,7 +361,7 @@ app.get('/libro/:id', async (req, res) => {
             throw new Error('Libro no encontrado');
         }
 
-        res.status(200).send({"id": respuesta[0].id_libro, "nombre": respuesta[0].nombre, "descripcion": respuesta[0].descripcion, "categoria_id": respuesta[0].categoria_id , "persona_id": respuesta[0].persona_id});
+        res.status(200).send({"id": respuesta[0].id_libro, "nombre": respuesta[0].nombre, "descripcion": respuesta[0].descripcion, "id_categoria": respuesta[0].id_categoria , "id_persona": respuesta[0].id_persona});
 
     }
     catch(e){
@@ -416,6 +416,81 @@ app.post('/libro', async (req, res) => {
         respuesta = await qy(query,[nombre, descripcion, id_categoria, id_persona]);
 
         res.status(200).send({"id": respuesta.insertId, "nombre": nombre, "descripcion": descripcion, "id_categoria": id_categoria, "id_persona": id_persona});
+
+    }
+    catch(e){
+        console.log(e.message);
+        res.status(413).send({ "mensaje": e.message});
+    }
+
+});
+
+
+
+app.delete('/libro/:id', async (req,res) => {
+
+    try{
+
+        const id = req.params.id;
+
+        // Realizo validaciones
+        let query = "SELECT * FROM libro WHERE id_libro = ?";
+        let respuesta = await qy(query,[id]);
+
+        if(respuesta.length == 0){
+            throw new Error("No existe ese libro");
+        }
+
+        console.log(respuesta[0].id_persona);
+        if(respuesta[0].id_persona >= 0){
+            throw new Error("Ese libro prestado no se puede borrar");
+        }
+
+        query = "DELETE FROM libro WHERE id_libro = ?";
+        respuesta = await qy(query,[id]);
+        res.status(200).send({"mensaje": "Se borró correctamente"});
+
+    }
+    catch(e){
+        console.log(e.message);
+        res.status(413).send({"mensaje": e.message});
+    }
+
+});
+
+app.put('/libro/:id', async (req,res) => {
+
+    try{
+        const id = req.params.id;
+        const nombreModificado = req.body.nombre.toUpperCase();
+        const descripcionModificada = req.body.descripcion;
+        const id_categoria = req.body.id_categoria;
+        const id_persona = req.body.id_persona;
+
+        // Realizo las validaciones
+        // Chequeo si existe el libro
+        let query = "SELECT COUNT(*) AS cantidad FROM libro WHERE id_libro = ?";
+        let respuesta = await qy(query, [id]);
+        let cantidad = respuesta[0].cantidad;
+
+        if(cantidad == 0){
+            throw new Error("No se encuentra ese libro");
+        }
+
+        // Valido que no esté intentando modificar otro dato que no sea descripción; se puede resolver en la vista
+        // Si encuentro un libro con los mismos valores pasados por el body, significa que no está intentando modificar otro dato que no sea la descripción
+        query = "SELECT COUNT(*) AS cantidad FROM libro WHERE id_libro = ? AND nombre = ? AND id_categoria = ? AND id_persona = ?";
+        respuesta = await qy(query, [id, nombreModificado, id_categoria, id_persona]);
+        cantidad = respuesta[0].cantidad;
+
+        if(cantidad == 0){
+            throw new Error("Sólo se puede modificar la descripción del libro");
+        }
+
+
+        query = "UPDATE libro SET descripcion = ? WHERE id_libro = ?";
+        respuesta = await qy(query, [descripcionModificada,id]);
+        res.status(200).send({"id": id, "nombre": nombreModificado, "descripcion": descripcionModificada, "id_categoria": id_categoria, "id_persona": id_persona});
 
     }
     catch(e){
