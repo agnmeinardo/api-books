@@ -113,7 +113,7 @@ app.get('/categoria/:id', async (req, res) => {
 app.post('/categoria', async (req, res) => {
 
     try{
-
+        // Recibe {"nombre": string}
         var nombre = req.body.nombre.toUpperCase();
 
         // Realizo validaciones
@@ -227,6 +227,7 @@ app.post('/persona', async (req, res) => {
 
     try{
 
+        // Recibe {"nombre": string, "apellido": string, "mail": string, "alias": string}
         let nombre = req.body.nombre.toUpperCase(); // UpperCase?
         let apellido = req.body.apellido.toUpperCase();
         let mail = req.body.mail; // Los tomo literal; no se distinguen minúsculas y mayúsculas.
@@ -268,6 +269,7 @@ app.put('/persona/:id', async (req,res) => {
 
     try{
         const id = req.params.id;
+        // Recibe {"nombre": string, "apellido": string, "mail": string, "alias": string}
         const nombreNuevo = req.body.nombre.toUpperCase();
         const apellidoNuevo = req.body.apellido.toUpperCase();
         const mail = req.body.mail; // El "no se puede modificar" puede ir en la vista y así no se hacen modificaciones desde el server.
@@ -375,6 +377,7 @@ app.post('/libro', async (req, res) => {
 
     try{
 
+        // Recibe {"nombre": string, "descripcion": string, "id_categoria": número, "id_persona": número}
         const nombre = req.body.nombre.toUpperCase(); // Se settea el nombre en upperCase para evitar errores de literalidad.
         const descripcion = req.body.descripcion;
         const id_categoria = req.body.id_categoria;
@@ -462,6 +465,7 @@ app.put('/libro/:id', async (req,res) => {
 
     try{
         const id = req.params.id;
+        // Recibe {"nombre": string, "descripcion": string, "id_categoria": número, "id_persona": número}
         const nombreModificado = req.body.nombre.toUpperCase();
         const descripcionModificada = req.body.descripcion;
         const id_categoria = req.body.id_categoria;
@@ -499,6 +503,90 @@ app.put('/libro/:id', async (req,res) => {
     }
 
 });
+
+app.put('/libro/prestar/:id', async (req,res) => {
+
+    try{
+
+        // No se explicita muy bien en el enunciado. Doy por supuesto que vienen ambos ids por el body
+        // Recibe {"id": número, "id_persona": número}
+        const id_libro_prestar = req.body.id;
+        const id_persona = req.body.id_persona;
+
+        // Verifico si existe el libro que se quiere prestar
+        let query = "SELECT * FROM libro WHERE id_libro = ?";
+        let respuesta = await qy(query, [id_libro_prestar]);
+
+        if(respuesta.length == 0){
+            throw new Error("No se encontró el libro");
+        }
+
+        // Verifico si existe la persona a la que se le quiere prestar el libro
+        query = "SELECT * FROM persona WHERE id_persona = ?";
+        respuesta = await qy(query, [id_persona]);
+
+        if(respuesta.length == 0){
+            throw new Error("No se encontro la persona a la que se quiere prestar el libro");
+        }
+        
+        query = "SELECT id_persona FROM libro WHERE id_libro = ?";
+        respuesta = await qy(query, [id_libro_prestar]);
+        const id_persona_prestada = respuesta[0].id_persona;
+        
+        if( id_persona_prestada != null){
+            throw new Error("El libro ya se encuentra prestado; no se puede prestar hasta que no se devuelva");
+        }
+
+
+        query = "UPDATE libro SET id_persona = ? WHERE id_libro = ?";
+        respuesta = await qy(query, [id_persona,id_libro_prestar]);
+        res.status(200).send({"mensaje": "Se prestó correctamente"});
+
+    }
+    catch(e){
+        console.log(e.message);
+        res.status(413).send({"mensaje": e.message});
+    }
+
+});
+
+app.put('/libro/devolver/:id', async (req,res) => {
+
+    try{
+
+        // No se explicita muy bien en el enunciado. Doy por supuesto que vienen ambos ids por el body
+        const id_libro_prestado = req.params.id;
+
+        // Verifico si existe el libro que se quiere devolver
+        let query = "SELECT * FROM libro WHERE id_libro = ?";
+        let respuesta = await qy(query, [id_libro_prestado]);
+
+        if(respuesta.length == 0){
+            throw new Error("Ese libro no existe");
+        }
+
+        // Verifico si el libro no se encontraba prestado
+        query = "SELECT id_persona FROM libro WHERE id_libro = ?";
+        respuesta = await qy(query, [id_libro_prestado]);
+        const id_persona_prestada = respuesta[0].id_persona;
+        
+        if( id_persona_prestada == null){
+            throw new Error("Ese libro no estaba prestado!");
+        }
+
+
+        query = "UPDATE libro SET id_persona = null WHERE id_libro = ?";
+        respuesta = await qy(query, [id_libro_prestado]);
+        res.status(200).send({"mensaje": "Se realizó la devolución correctamente"});
+
+    }
+    catch(e){
+        console.log(e.message);
+        res.status(413).send({"mensaje": e.message});
+    }
+
+});
+
 
 
 
