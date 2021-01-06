@@ -116,7 +116,7 @@ app.post('/categoria', async (req, res) => {
         var nombre = req.body.nombre.toUpperCase();
 
         // Realizo validaciones
-        if(!nombre){
+        if(!nombre || req.body.nombre.trim().length == 0){
             throw new Error('Faltan datos');
         }
 
@@ -246,7 +246,7 @@ app.post('/persona', async (req, res) => {
         }
 
         // Valido que haya ingresado los cuatro datos
-        if(!nombre || !apellido || !alias || !mail){
+        if(!nombre || !apellido || !alias || !mail || nombre.trim().length == 0 || apellido.trim().length == 0 || alias.trim().length == 0){
             throw new Error('Faltan datos');
         }
 
@@ -384,7 +384,7 @@ app.post('/libro', async (req, res) => {
         let query, respuesta;
 
         // Realizo validaciones
-        if(!nombre || !id_categoria){
+        if(!nombre || !id_categoria || nombre.trim().length == 0){
             throw new Error('Nombre y categoria son datos obligatorios');
         }
 
